@@ -55,7 +55,10 @@ public class SpringClientProcessor implements ClientProcessor {
         CodeBlock.Builder builder = CodeBlock.builder();
 
         // uri
-        builder.addStatement("$T builder = $T.fromUriString($S);", UriComponentsBuilder.class, UriComponentsBuilder.class, baseUrl + method.getPath());
+        builder.addStatement("$T builder = $T.fromUriString($L + $S);",
+                UriComponentsBuilder.class,
+                UriComponentsBuilder.class,
+                "this.baseUrl", method.getPath());
 
         // TODO queryParams
         method.getQueryParams().stream()
@@ -115,5 +118,9 @@ public class SpringClientProcessor implements ClientProcessor {
         return builder.build();
     }
 
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
 }
 
