@@ -8,6 +8,7 @@ import cloud.goudai.httpclient.processor.internal.SpringClientProcessor;
 import com.squareup.javapoet.*;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -79,6 +80,11 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                     .addField(FieldSpec.builder(RestTemplate.class, restTemplateName, Modifier.PRIVATE)
                             .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
                             .addAnnotation(AnnotationSpec.builder(LoadBalanced.class).build())
+                            .build())
+                    .addField(FieldSpec.builder(String.class, "baseUrl", Modifier.PRIVATE)
+                            .addAnnotation(AnnotationSpec.builder(Value.class)
+                                    .addMember("value", "$S", "${" + name + ".baseUrl:" + processor.getBaseUrl() + "}")
+                                    .build())
                             .build());
 
             for (Element element : typeElement.getEnclosedElements()) {
