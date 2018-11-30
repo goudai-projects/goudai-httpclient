@@ -47,6 +47,8 @@
                     <version>3.8.0</version>
                     <configuration>
                         <parameters>true</parameters>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
             </plugins>
