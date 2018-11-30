@@ -71,24 +71,28 @@ public interface GoodService {
 )
 @Service("goodServiceConnector")
 public class GoodServiceConnector implements GoodService {
-  @Autowired
-  @LoadBalanced
+    
   private RestTemplate restTemplate;
 
   @Value("${good-service.baseUrl:http://good-service}")
   private String baseUrl;
 
+  @Autowired
+  public GoodServiceConnector(RestTemplate restTemplate) {
+    Assert.notNull(restTemplate, "restTemplate must not be null!");;
+    this.restTemplate = restTemplate;
+  }
+
   @Override
   public ApiResult<GoodsVo> get(String id) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    uriVariables.put("id", id);;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(null, headers);;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");
+    Map<String, Object> uriVariables = new HashMap<>();
+    uriVariables.put("id", id);
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Object> httpEntity = new HttpEntity<>(null, headers);
     URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+           .buildAndExpand()
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.GET,
@@ -99,17 +103,15 @@ public class GoodServiceConnector implements GoodService {
 
   @Override
   public ApiResult<List<GoodsVo>> list(GoodQueryModel query) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/list");;
-    builder.queryParam("id",query.getId());;
-    builder.queryParam("name",query.getName());;
-    builder.queryParam("page",query.getPage());;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(null, headers);;
-    URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/list");
+    if(query.getId() != null) builder.queryParam("id",query.getId());
+    if(query.getName() != null) builder.queryParam("name",query.getName());
+    if(query.getPage() != null) builder.queryParam("page",query.getPage());
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Object> httpEntity = new HttpEntity<>(null, headers);
+    URI uri = builder
+           .buildAndExpand()
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.GET,
@@ -120,14 +122,12 @@ public class GoodServiceConnector implements GoodService {
 
   @Override
   public ApiResult<GoodsVo> post(Goods goods) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "");;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(goods, headers);;
-    URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "");
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Goods> httpEntity = new HttpEntity<>(goods, headers);
+    URI uri = builder
+           .buildAndExpand()
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.POST,
@@ -138,15 +138,14 @@ public class GoodServiceConnector implements GoodService {
 
   @Override
   public ApiResult<GoodsVo> put(String id, Goods goods) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    indexUriVariables.add(0, id);;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(goods, headers);;
-    URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");
+    List<Object> indexUriVariables = new LinkedList<>();
+    indexUriVariables.add(0, id);
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Goods> httpEntity = new HttpEntity<>(goods, headers);
+    URI uri = builder
+           .buildAndExpand(indexUriVariables.toArray())
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.PUT,
@@ -157,15 +156,14 @@ public class GoodServiceConnector implements GoodService {
 
   @Override
   public ApiResult<Void> delete(String id) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    indexUriVariables.add(0, id);;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(null, headers);;
-    URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");
+    List<Object> indexUriVariables = new LinkedList<>();
+    indexUriVariables.add(0, id);
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Object> httpEntity = new HttpEntity<>(null, headers);
+    URI uri = builder
+           .buildAndExpand(indexUriVariables.toArray())
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.DELETE,
@@ -176,15 +174,14 @@ public class GoodServiceConnector implements GoodService {
 
   @Override
   public ApiResult<GoodsVo> patch(String id, Goods goods) {
-    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");;
-    Map<String, Object> uriVariables = new HashMap<>();;
-    List<Object> indexUriVariables = new LinkedList<>();;
-    indexUriVariables.add(0, id);;
-    HttpHeaders headers = new HttpHeaders();;
-    HttpEntity httpEntity = new HttpEntity(goods, headers);;
-    URI uri = builder.uriVariables(uriVariables)
-               .buildAndExpand(indexUriVariables.toArray())
-               .toUri();;
+    UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(this.baseUrl + "/{id}");
+    List<Object> indexUriVariables = new LinkedList<>();
+    indexUriVariables.add(0, id);
+    HttpHeaders headers = new HttpHeaders();
+    HttpEntity<Goods> httpEntity = new HttpEntity<>(goods, headers);
+    URI uri = builder
+           .buildAndExpand(indexUriVariables.toArray())
+           .toUri();
     return restTemplate.exchange(
                            uri,
                            HttpMethod.PATCH,

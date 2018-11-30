@@ -53,9 +53,10 @@ public class SpringClientProcessor implements ClientProcessor {
     @Override
     public CodeBlock processMethod(Method method) {
         CodeBlock.Builder builder = CodeBlock.builder();
-
+        boolean hasNamedUriVariables = false;
+        boolean hasIndexedUriVariables = false;
         // uri
-        builder.addStatement("$T builder = $T.fromUriString($L + $S);",
+        builder.addStatement("$T builder = $T.fromUriString($L + $S)",
                 UriComponentsBuilder.class,
                 UriComponentsBuilder.class,
                 "this.baseUrl", method.getPath());
@@ -63,33 +64,53 @@ public class SpringClientProcessor implements ClientProcessor {
         // TODO queryParams
         method.getQueryParams().stream()
                 .flatMap(qp -> qp.getProperties().stream())
-                .forEach(p -> builder.addStatement("builder.queryParam($S,$L);", p.getName(), p.getReader()));
+                .forEach(p -> {
+                    builder.addStatement("if($L != null) builder.queryParam($S,$L)", p.getReader(), p.getName(), p.getReader());
+                });
 
-        builder.addStatement("$T<$T, $T> uriVariables = new $T<>();", Map.class, String.class, Object.class, HashMap.class);
-        builder.addStatement("$T<$T> indexUriVariables = new $T<>();", List.class, Object.class, LinkedList.class);
+        CodeBlock.Builder namedUriVariables = CodeBlock.builder();
+        CodeBlock.Builder indexedUriVariables = CodeBlock.builder();
         List<Parameter> uriVariables = method.getUriVariables();
         for (Parameter uriVariable : uriVariables) {
             if (StringUtils.isNotBlank(uriVariable.getUriVariableName())) {
-                builder.addStatement("uriVariables.put($S, $L);", uriVariable.getUriVariableName(), uriVariable.getName());
+                namedUriVariables.addStatement("uriVariables.put($S, $L)", uriVariable.getUriVariableName(), uriVariable.getName());
+                hasNamedUriVariables = true;
             } else {
-                builder.addStatement("indexUriVariables.add($L, $L);", uriVariable.getIndex(), uriVariable.getName());
+                indexedUriVariables.addStatement("indexUriVariables.add($L, $L)", uriVariable.getIndex(), uriVariable.getName());
+                hasIndexedUriVariables = true;
             }
         }
-        builder.addStatement("$T headers = new $T();", HttpHeaders.class, HttpHeaders.class);
+        if (hasIndexedUriVariables) {
+            builder.addStatement("$T<$T> indexUriVariables = new $T<>()", List.class, Object.class, LinkedList.class);
+            builder.add(indexedUriVariables.build());
+        }
+        if (hasNamedUriVariables) {
+            builder.addStatement("$T<$T, $T> uriVariables = new $T<>()", Map.class, String.class, Object.class, HashMap.class);
+            builder.add(namedUriVariables.build());
+        }
+
+        builder.addStatement("$T headers = new $T()", HttpHeaders.class, HttpHeaders.class);
         for (Parameter header : method.getHeaders()) {
-            builder.addStatement("headers.add(%S, $L);", header.getHeaderName(), header.getName());
+            builder.addStatement("headers.add(%S, $L)", header.getHeaderName(), header.getName());
         }
         Parameter body = method.getBody();
         if (body == null) {
-            builder.addStatement("$T httpEntity = new $T(null, $L);", HttpEntity.class, HttpEntity.class, "headers");
+            builder.addStatement("$T<Object> httpEntity = new $T<>(null, $L)", HttpEntity.class, HttpEntity.class, "headers");
         } else {
-            builder.addStatement("$T httpEntity = new $T($L, $L);", HttpEntity.class, HttpEntity.class, body.getName(), "headers");
+            builder.addStatement("$T<$T> httpEntity = new $T<>($L, $L)", HttpEntity.class,
+                    ParameterizedTypeName.get(body.getVariableElement().asType()), HttpEntity.class, body.getName(), "headers");
         }
-
-        builder.addStatement("$T uri = builder.uriVariables($L)\n" +
-                        "       .buildAndExpand($L.toArray())\n" +
-                        "       .toUri();",
-                URI.class, "uriVariables", "indexUriVariables");
+        if (hasNamedUriVariables) {
+            builder.add("$T uri = builder.uriVariables($L)\n", URI.class, "uriVariables");
+        } else {
+            builder.add("$T uri = builder\n", URI.class);
+        }
+        if (hasIndexedUriVariables) {
+            builder.add("       .buildAndExpand($L.toArray())\n", "indexUriVariables");
+        } else {
+            builder.add("       .buildAndExpand()\n");
+        }
+        builder.addStatement("       .toUri()");
         if (method.isReturnVoid()) {
             builder.addStatement("$L.exchange(\n" +
                             "                   uri,\n" +

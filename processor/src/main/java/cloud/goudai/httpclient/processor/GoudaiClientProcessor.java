@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.processing.*;
@@ -53,7 +54,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
     @Override
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
-        messager.printMessage(Diagnostic.Kind.WARNING, "GoudaiClientProcessor process");
+        messager.printMessage(Diagnostic.Kind.NOTE, "GoudaiClientProcessor process");
         Set<TypeElement> goudaiClients = getGoudaiClients(annotations, roundEnv);
         processGoudaiClients(goudaiClients);
         return false;
@@ -78,14 +79,22 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                             .addMember("value", "$S", className.substring(0, 1).toLowerCase() + className.substring(1))
                             .build())
                     .addField(FieldSpec.builder(RestTemplate.class, restTemplateName, Modifier.PRIVATE)
-                            .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
-                            .addAnnotation(AnnotationSpec.builder(LoadBalanced.class).build())
+//                            .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
+//                            .addAnnotation(AnnotationSpec.builder(LoadBalanced.class).build())
                             .build())
                     .addField(FieldSpec.builder(String.class, "baseUrl", Modifier.PRIVATE)
                             .addAnnotation(AnnotationSpec.builder(Value.class)
                                     .addMember("value", "$S", "${" + name + ".baseUrl:" + processor.getBaseUrl() + "}")
                                     .build())
-                            .build());
+                            .build())
+                    .addMethod(MethodSpec.constructorBuilder()
+                            .addModifiers(Modifier.PUBLIC)
+                            .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
+                            .addParameter(ParameterSpec.builder(RestTemplate.class, restTemplateName).build())
+                            .addStatement("$T.notNull($L, $S);", Assert.class, restTemplateName, restTemplateName + " must not be null!")
+                            .addStatement("this.$L = $L", restTemplateName, restTemplateName)
+                            .build())
+                    ;
 
             for (Element element : typeElement.getEnclosedElements()) {
                 if (element instanceof ExecutableElement) { // 方法
