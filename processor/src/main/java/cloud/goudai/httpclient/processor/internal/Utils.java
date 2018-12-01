@@ -1,16 +1,22 @@
 package cloud.goudai.httpclient.processor.internal;
 
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import org.apache.commons.lang3.StringUtils;
+
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.SimpleElementVisitor6;
-import javax.lang.model.util.SimpleTypeVisitor6;
+import javax.lang.model.util.SimpleElementVisitor8;
+import javax.lang.model.util.SimpleTypeVisitor8;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author jianglin
  * @date 2018-11-30
  */
-public class Utils {
+final class Utils {
 
     public static String getPath(String pathValue) {
         if (pathValue == null) return "";
@@ -33,9 +39,9 @@ public class Utils {
         return new String(chars);
     }
 
-    protected static String getQualifiedName(TypeMirror type) {
+    public static String getQualifiedName(TypeMirror type) {
         DeclaredType declaredType = type.accept(
-                new SimpleTypeVisitor6<DeclaredType, Void>() {
+                new SimpleTypeVisitor8<DeclaredType, Void>() {
                     @Override
                     public DeclaredType visitDeclared(DeclaredType t, Void p) {
                         return t;
@@ -49,7 +55,7 @@ public class Utils {
         }
 
         TypeElement typeElement = declaredType.asElement().accept(
-                new SimpleElementVisitor6<TypeElement, Void>() {
+                new SimpleElementVisitor8<TypeElement, Void>() {
                     @Override
                     public TypeElement visitType(TypeElement e, Void p) {
                         return e;
@@ -59,5 +65,25 @@ public class Utils {
         );
 
         return typeElement != null ? typeElement.getQualifiedName().toString() : null;
+    }
+
+    public static String getSimpleName(TypeName typeName) {
+        if (typeName instanceof ParameterizedTypeName) {
+            ParameterizedTypeName pTypeName = (ParameterizedTypeName) typeName;
+            List<String> list = new ArrayList<>();
+            list.add(pTypeName.rawType.simpleName());
+            pTypeName.typeArguments.forEach(a -> list.add(getSimpleName(a)));
+            return StringUtils.join(list, "_").toUpperCase();
+        }
+
+        return unqualify(typeName.toString()).toUpperCase();
+    }
+
+    public static String unqualify(String qualifiedName) {
+        return unqualify(qualifiedName, '.');
+    }
+
+    public static String unqualify(String qualifiedName, char separator) {
+        return qualifiedName.substring(qualifiedName.lastIndexOf(separator) + 1);
     }
 }
