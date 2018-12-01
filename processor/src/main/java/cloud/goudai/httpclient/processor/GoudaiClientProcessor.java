@@ -137,6 +137,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                 }
             }
             JavaFile javaFile = JavaFile.builder(packageName, typeSpecBuilder.build())
+                    .indent("\t")
                     .build();
             try {
                 javaFile.writeTo(filer);
