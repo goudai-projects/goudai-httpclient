@@ -6,18 +6,11 @@ import cloud.goudai.httpclient.processor.internal.Method;
 import cloud.goudai.httpclient.processor.internal.Parameter;
 import cloud.goudai.httpclient.processor.internal.SpringClientProcessor;
 import com.squareup.javapoet.*;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
-import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
-import javax.lang.model.util.ElementKindVisitor6;
+import javax.lang.model.util.ElementKindVisitor8;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -66,35 +59,8 @@ public class GoudaiClientProcessor extends AbstractProcessor {
         for (TypeElement typeElement : goudaiClients) {
             String packageName = elementUtils.getPackageOf(typeElement).getQualifiedName().toString();
             String name = typeElement.getAnnotation(GoudaiClient.class).value();
-            String className = typeElement.getSimpleName().toString() + "Connector";
-            SpringClientProcessor processor = new SpringClientProcessor(restTemplateName, name);
-            processor.processType(typeElement);
-            TypeSpec.Builder typeSpecBuilder = TypeSpec.classBuilder(className)
-                    .addSuperinterface(TypeName.get(typeElement.asType()))
-                    .addModifiers(new Modifier[]{Modifier.PUBLIC})
-                    .addAnnotation(AnnotationSpec.builder(ClassName.get(CircuitBreaker.class))
-                            .addMember("name", "$S", name)
-                            .build())
-                    .addAnnotation(AnnotationSpec.builder(ClassName.get(Service.class))
-                            .addMember("value", "$S", className.substring(0, 1).toLowerCase() + className.substring(1))
-                            .build())
-                    .addField(FieldSpec.builder(RestTemplate.class, restTemplateName, Modifier.PRIVATE)
-//                            .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
-//                            .addAnnotation(AnnotationSpec.builder(LoadBalanced.class).build())
-                            .build())
-                    .addField(FieldSpec.builder(String.class, "baseUrl", Modifier.PRIVATE)
-                            .addAnnotation(AnnotationSpec.builder(Value.class)
-                                    .addMember("value", "$S", "${" + name + ".baseUrl:" + processor.getBaseUrl() + "}")
-                                    .build())
-                            .build())
-                    .addMethod(MethodSpec.constructorBuilder()
-                            .addModifiers(Modifier.PUBLIC)
-                            .addAnnotation(AnnotationSpec.builder(Autowired.class).build())
-                            .addParameter(ParameterSpec.builder(RestTemplate.class, restTemplateName).build())
-                            .addStatement("$T.notNull($L, $S);", Assert.class, restTemplateName, restTemplateName + " must not be null!")
-                            .addStatement("this.$L = $L", restTemplateName, restTemplateName)
-                            .build())
-                    ;
+            SpringClientProcessor processor = new SpringClientProcessor(restTemplateName, name, typeUtils, elementUtils, messager);
+            TypeSpec.Builder typeSpecBuilder = processor.processType(typeElement);
 
             for (Element element : typeElement.getEnclosedElements()) {
                 if (element instanceof ExecutableElement) { // 方法
@@ -136,6 +102,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                     typeSpecBuilder.addMethod(methodBuilder.build());
                 }
             }
+            processor.afterProcess(typeSpecBuilder);
             JavaFile javaFile = JavaFile.builder(packageName, typeSpecBuilder.build())
                     .indent("\t")
                     .build();
@@ -200,7 +167,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
 
     private TypeElement asTypeElement(Element element) {
         return element.accept(
-                new ElementKindVisitor6<TypeElement, Void>() {
+                new ElementKindVisitor8<TypeElement, Void>() {
                     @Override
                     public TypeElement visitTypeAsInterface(TypeElement e, Void p) {
                         return e;

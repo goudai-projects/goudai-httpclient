@@ -1,6 +1,7 @@
 package cloud.goudai.httpclient.processor.internal;
 
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.TypeSpec;
 
 import javax.lang.model.element.TypeElement;
 
@@ -10,7 +11,7 @@ import javax.lang.model.element.TypeElement;
  */
 public interface ClientProcessor {
 
-    void processType(TypeElement typeElement);
+    TypeSpec.Builder processType(TypeElement typeElement);
 
     CodeBlock processMethod(Method method);
 }
