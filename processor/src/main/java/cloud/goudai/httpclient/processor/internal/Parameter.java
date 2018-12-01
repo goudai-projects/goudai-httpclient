@@ -12,6 +12,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ public class Parameter {
     private Types typeUtils;
     private Elements elementUtils;
     private Messager messager;
+    private TypeHelper typeHelper;
 
     private Parameter(Builder builder) {
         setIndex(builder.index);
@@ -41,6 +43,7 @@ public class Parameter {
         typeUtils = builder.typeUtils;
         elementUtils = builder.elementUtils;
         messager = builder.messager;
+        typeHelper = new TypeHelper(this.elementUtils, this.typeUtils);
     }
 
     public static Builder newBuilder() {
@@ -82,14 +85,32 @@ public class Parameter {
         return (!isHeader() && !isBody() && !isUriVariable()) || variableElement.getAnnotation(RequestParam.class) != null;
     }
 
+    public boolean isMap() {
+        return typeHelper.isMapType(variableElement.asType());
+    }
+
+    public boolean isCollection() {
+        return typeHelper.isCollectionType(variableElement.asType());
+    }
+
+    public boolean isIterable() {
+        return typeHelper.isIterableType(variableElement.asType());
+    }
+
+    public boolean isArray() {
+        return typeHelper.isArray(variableElement.asType());
+    }
+
     public List<Property> getProperties() {
         List<Property> properties = new ArrayList<>();
-        TypeName typeName = TypeName.get(variableElement.asType());
+        TypeMirror typeMirror = variableElement.asType();
+        TypeName typeName = TypeName.get(typeMirror);
         if (typeName.isPrimitive() || typeName.isBoxedPrimitive() || typeName.equals(TypeName.get(String.class))) {
             properties.add(Property.newBuilder().name(getPropertyName(variableElement)).reader(this.name).build());
             return properties;
         }
-        for (Element member : typeUtils.asElement(variableElement.asType())
+
+        for (Element member : typeUtils.asElement(typeMirror)
                 .getEnclosedElements()) {
             if (member instanceof ExecutableElement) {
                 ExecutableElement executableElement = (ExecutableElement) member;

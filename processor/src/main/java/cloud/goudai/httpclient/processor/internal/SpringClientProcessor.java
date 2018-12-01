@@ -61,12 +61,21 @@ public class SpringClientProcessor implements ClientProcessor {
                 UriComponentsBuilder.class,
                 "this.baseUrl", method.getPath());
 
-        // TODO queryParams
-        method.getQueryParams().stream()
-                .flatMap(qp -> qp.getProperties().stream())
-                .forEach(p -> {
-                    builder.addStatement("if($L != null) builder.queryParam($S,$L)", p.getReader(), p.getName(), p.getReader());
-                });
+        for (Parameter queryParam : method.getQueryParams()) {
+            if (queryParam.isMap()) {
+                builder.addStatement("if($L != null) $L.forEach((k, v) -> builder.queryParam(k, v))", queryParam.getName(), queryParam.getName());
+            } else if (queryParam.isArray()) {
+                builder.addStatement("if($L != null) builder.queryParam($S,$L)", queryParam.getName(), queryParam.getName(), queryParam.getName());
+            } else if (queryParam.isCollection() || queryParam.isIterable()) {
+                builder.addStatement("if($L != null) $L.forEach(e -> builder.queryParam($S, e))", queryParam.getName(), queryParam.getName(), queryParam.getName());
+            } else {
+                queryParam.getProperties().forEach(p ->
+                        builder.addStatement("if($L != null) builder.queryParam($S,$L)",
+                                p.getReader(),
+                                p.getName(),
+                                p.getReader()));
+            }
+        }
 
         CodeBlock.Builder namedUriVariables = CodeBlock.builder();
         CodeBlock.Builder indexedUriVariables = CodeBlock.builder();
