@@ -170,7 +170,7 @@ public class SpringClientProcessor implements ClientProcessor {
                 HttpHeaders.class,
                 HttpHeaders.class);
         for (Parameter header : method.getHeaders()) {
-            builder.addStatement("headers.add(%S, $L)", header.getHeaderName(), header.getName());
+            builder.addStatement("headers.add($S, $L)", header.getHeaderName(), header.getName());
         }
         Parameter body = method.getBody();
         if (body == null) {
