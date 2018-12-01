@@ -1,11 +1,18 @@
 package cloud.goudai.httpclient.processor.internal;
 
+import com.squareup.javapoet.TypeName;
+
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
+
+import static cloud.goudai.httpclient.processor.internal.Utils.decapitalize;
+import static cloud.goudai.httpclient.processor.internal.Utils.getQualifiedName;
 
 /**
  * @author jianglin
@@ -43,6 +50,87 @@ public class TypeHelper {
     public boolean isArray(TypeMirror typeMirror) {
 
         return typeMirror.getKind() == TypeKind.ARRAY;
+    }
+
+    public Set<Property> getProperties(String parent, String reader, String prefix, String paramName, TypeMirror typeMirror) {
+        Set<Property> properties = new HashSet<>();
+        TypeName typeName = TypeName.get(typeMirror);
+        if (typeName.isPrimitive()
+                || typeName.isBoxedPrimitive()
+                || typeName.equals(TypeName.get(String.class))
+                || typeName.equals(TypeName.get(Date.class))) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).build());
+            return properties;
+        }
+
+        if (isArray(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isArray(true).build());
+            return properties;
+        }
+
+        if (isMapType(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isMap(true).build());
+            return properties;
+        }
+
+
+        if (isCollectionType(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isCollection(true).build());
+            return properties;
+        }
+
+
+        if (isIterableType(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isIterable(true).build());
+            return properties;
+        }
+
+
+        for (Element member : typeUtils.asElement(typeMirror)
+                .getEnclosedElements()) {
+            if (member instanceof ExecutableElement) {
+                ExecutableElement executableElement = (ExecutableElement) member;
+                TypeMirror returnType = executableElement.getReturnType();
+                if (!isGetter(executableElement)) {
+                    continue;
+                }
+                String name = getPropertyName(executableElement);
+                String curParent = parent == null ? reader : String.join(".", parent, reader);
+                String curName = prefix == null ? name : String.join(".", prefix, name);
+                properties.addAll(getProperties(curParent, executableElement.toString(), curName, curName, returnType));
+            }
+        }
+        return properties;
+    }
+
+    public String getPropertyName(ExecutableElement getterOrSetterMethod) {
+        String methodName = getterOrSetterMethod.getSimpleName().toString();
+        if (methodName.startsWith("get") || methodName.startsWith("set")) {
+            return decapitalize(methodName.substring(3));
+        }
+        return decapitalize(methodName.substring(methodName.startsWith("is") ? 2 : 3));
+    }
+
+    private Boolean isGetter(ExecutableElement executable) {
+
+        return executable != null && executable.getModifiers().contains(Modifier.PUBLIC) &&
+                executable.getParameters().isEmpty() &&
+                isGetterMethod(executable);
+
+    }
+
+
+    public boolean isGetterMethod(ExecutableElement method) {
+        String methodName = method.getSimpleName().toString();
+
+        boolean isNonBooleanGetterName = methodName.startsWith("get") && methodName.length() > 3 &&
+                method.getReturnType().getKind() != TypeKind.VOID;
+
+        boolean isBooleanGetterName = methodName.startsWith("is") && methodName.length() > 2;
+        boolean returnTypeIsBoolean = method.getReturnType().getKind() == TypeKind.BOOLEAN ||
+                "java.lang.Boolean".equals(getQualifiedName(method.getReturnType()));
+
+        return isNonBooleanGetterName || (isBooleanGetterName && returnTypeIsBoolean);
     }
 
 }
