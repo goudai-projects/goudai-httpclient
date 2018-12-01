@@ -12,6 +12,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -109,29 +111,70 @@ public class SpringClientProcessor implements ClientProcessor {
                 UriComponentsBuilder.class,
                 UriComponentsBuilder.class,
                 "this.baseUrl", method.getPath());
-
-        for (Parameter queryParam : method.getQueryParams()) {
+        List<Parameter> queryParams = method.getQueryParams();
+        if (queryParams.size() > 0) {
+            builder.addStatement("$T p = new $T<>()",
+                    ParameterizedTypeName.get(MultiValueMap.class, String.class, String.class),
+                    TypeName.get(LinkedMultiValueMap.class)
+            );
+        }
+        for (Parameter queryParam : queryParams) {
             if (queryParam.isMap()) {
-                builder.addStatement("if($L != null) $L.forEach((k, v) -> builder.queryParam(k, v))",
+                builder.addStatement("if($L != null) $L.forEach((k, v) -> p.add(k, $T.valueOf(v)))",
                         queryParam.getName(),
-                        queryParam.getName());
+                        queryParam.getName(),
+                        TypeName.get(String.class));
             } else if (queryParam.isArray()) {
-                builder.addStatement("if($L != null) builder.queryParam($S,$L)",
+                builder.addStatement("if($L != null) $T.stream($L).forEach(s -> p.add($S, $T.valueOf(s)))",
+                        queryParam.getName(),
+                        Arrays.class,
                         queryParam.getName(),
                         queryParam.getName(),
-                        queryParam.getName());
+                        TypeName.get(String.class));
             } else if (queryParam.isCollection() || queryParam.isIterable()) {
-                builder.addStatement("if($L != null) $L.forEach(e -> builder.queryParam($S, e))",
+                builder.addStatement("if($L != null) $L.forEach(e -> p.add($S, $T.valueOf(e)))",
                         queryParam.getName(),
                         queryParam.getName(),
-                        queryParam.getName());
+                        queryParam.getName(),
+                        TypeName.get(String.class));
             } else {
-                queryParam.getProperties().forEach(p ->
-                        builder.addStatement("if($L != null) builder.queryParam($S,$L)",
-                                p.getReader(),
-                                p.getName(),
-                                p.getReader()));
+                queryParam.getProperties().forEach(p -> {
+                            CodeBlock.Builder builder1 = CodeBlock.builder()
+                                    .add("if($L)\n", p.getIfNotNullStatement());
+                            if (p.getArray()) {
+                                builder1.addStatement("\t\t$T.stream($L).forEach(s -> p.add($S, $T.valueOf(s)))",
+                                        Arrays.class,
+                                        p.getReadAccessor(),
+                                        p.getName(),
+                                        TypeName.get(String.class)
+                                );
+                            } else if (p.getMap()) {
+                                builder1.addStatement("\t\t$L.forEach((k, v) -> p.add($S + k, $T.valueOf(v)))",
+                                        p.getReadAccessor(),
+                                        p.getName() + ".",
+                                        TypeName.get(String.class)
+                                );
+                            } else if (p.getIterable() || p.getCollection()) {
+                                builder1.addStatement("\t\t$L.forEach(e -> p.add($S, $T.valueOf(e)))",
+                                        p.getReadAccessor(),
+                                        p.getName(),
+                                        TypeName.get(String.class)
+                                );
+                            } else {
+                                builder1.addStatement("\t\tp.add($S, $T.valueOf($L))",
+                                        p.getName(),
+                                        TypeName.get(String.class),
+                                        p.getReadAccessor()
+                                );
+                            }
+                            builder.add(builder1.build());
+                        }
+                );
             }
+        }
+
+        if (queryParams.size() > 0) {
+            builder.addStatement("builder.queryParams(p)");
         }
 
         CodeBlock.Builder namedUriVariables = CodeBlock.builder();
