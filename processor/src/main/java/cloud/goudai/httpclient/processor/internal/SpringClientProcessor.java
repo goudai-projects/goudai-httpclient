@@ -24,11 +24,14 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.net.URI;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static cloud.goudai.httpclient.processor.internal.Utils.getPath;
 import static cloud.goudai.httpclient.processor.internal.Utils.getSimpleName;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * @author jianglin
@@ -42,15 +45,20 @@ public class SpringClientProcessor implements ClientProcessor {
     private Types typeUtils;
     private Elements elementUtils;
     private Messager messager;
+    private String datePattern;
     private Set<FieldSpec> staticFields = new HashSet<>();
 
     public SpringClientProcessor(String restTemplateName,
-                                 String serviceName, Types typeUtils, Elements elementUtils, Messager messager) {
+                                 String serviceName,
+                                 Types typeUtils,
+                                 Elements elementUtils,
+                                 Messager messager, String datePattern) {
         this.restTemplateName = restTemplateName;
         this.serviceName = serviceName;
         this.typeUtils = typeUtils;
         this.elementUtils = elementUtils;
         this.messager = messager;
+        this.datePattern = datePattern;
     }
 
     @Override
@@ -69,7 +77,7 @@ public class SpringClientProcessor implements ClientProcessor {
         String name = typeElement.getAnnotation(GoudaiClient.class).value();
         String className = typeElement.getSimpleName().toString() + "Connector";
 
-        return TypeSpec.classBuilder(className)
+        TypeSpec.Builder builder = TypeSpec.classBuilder(className)
                 .addSuperinterface(TypeName.get(typeElement.asType()))
                 .addModifiers(new Modifier[]{Modifier.PUBLIC})
                 .addAnnotation(AnnotationSpec.builder(ClassName.get(CircuitBreaker.class))
@@ -97,8 +105,15 @@ public class SpringClientProcessor implements ClientProcessor {
                         .addStatement("$T.notNull($L, $S);",
                                 Assert.class, restTemplateName, restTemplateName + " must not be null!")
                         .addStatement("this.$L = $L", restTemplateName, restTemplateName)
-                        .build())
-                ;
+                        .build());
+        if (isNotBlank(this.datePattern)) {
+            builder.addField(FieldSpec.builder(String.class, "DATE_FORMAT_PATTERN")
+                    .initializer("$S", this.datePattern)
+                    .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                    .build());
+
+        }
+        return builder;
     }
 
     @Override
@@ -159,6 +174,15 @@ public class SpringClientProcessor implements ClientProcessor {
                                         p.getReadAccessor(),
                                         p.getName(),
                                         TypeName.get(String.class)
+                                );
+                            } else if (p.getDate() && isNotBlank(this.datePattern)) {
+                                staticFields.add(FieldSpec.builder(DateTimeFormatter.class, "dateTimeFormatter")
+                                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                                        .initializer("$T.ofPattern(DATE_FORMAT_PATTERN)\n.withZone($T.systemDefault())", DateTimeFormatter.class, ZoneId.class)
+                                        .build());
+                                builder1.addStatement("\t\tp.add($S, dateTimeFormatter.format($L.toInstant()))",
+                                        p.getName(),
+                                        p.getReadAccessor()
                                 );
                             } else {
                                 builder1.addStatement("\t\tp.add($S, $T.valueOf($L))",

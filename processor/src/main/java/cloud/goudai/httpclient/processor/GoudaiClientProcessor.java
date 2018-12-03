@@ -58,8 +58,10 @@ public class GoudaiClientProcessor extends AbstractProcessor {
 
         for (TypeElement typeElement : goudaiClients) {
             String packageName = elementUtils.getPackageOf(typeElement).getQualifiedName().toString();
-            String name = typeElement.getAnnotation(GoudaiClient.class).value();
-            SpringClientProcessor processor = new SpringClientProcessor(restTemplateName, name, typeUtils, elementUtils, messager);
+            GoudaiClient goudaiClient = typeElement.getAnnotation(GoudaiClient.class);
+            String name = goudaiClient.value();
+            String datePattern = goudaiClient.datePattern();
+            SpringClientProcessor processor = new SpringClientProcessor(restTemplateName, name, typeUtils, elementUtils, messager, datePattern);
             TypeSpec.Builder typeSpecBuilder = processor.processType(typeElement);
 
             for (Element element : typeElement.getEnclosedElements()) {

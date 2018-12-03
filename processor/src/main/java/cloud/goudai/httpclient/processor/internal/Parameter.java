@@ -93,6 +93,10 @@ public class Parameter {
         return typeHelper.isArray(variableElement.asType());
     }
 
+    public boolean isDate() {
+        return typeHelper.isArray(variableElement.asType());
+    }
+
     public Set<Property> getProperties() {
 
         TypeMirror typeMirror = variableElement.asType();

@@ -52,14 +52,23 @@ public class TypeHelper {
         return typeMirror.getKind() == TypeKind.ARRAY;
     }
 
+    public boolean isDate(TypeMirror typeMirror) {
+
+        return TypeName.get(typeMirror).equals(TypeName.get(Date.class));
+    }
+
     public Set<Property> getProperties(String parent, String reader, String prefix, String paramName, TypeMirror typeMirror) {
         Set<Property> properties = new HashSet<>();
         TypeName typeName = TypeName.get(typeMirror);
         if (typeName.isPrimitive()
                 || typeName.isBoxedPrimitive()
-                || typeName.equals(TypeName.get(String.class))
-                || typeName.equals(TypeName.get(Date.class))) {
+                || typeName.equals(TypeName.get(String.class))) {
             properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).build());
+            return properties;
+        }
+
+        if (isDate(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isDate(true).build());
             return properties;
         }
 

@@ -15,6 +15,7 @@ public class Property {
     private Boolean isMap;
     private Boolean isCollection;
     private Boolean isIterable;
+    private Boolean isDate;
 
     private Property(Builder builder) {
         setName(builder.name);
@@ -24,6 +25,7 @@ public class Property {
         isMap = builder.isMap;
         isCollection = builder.isCollection;
         isIterable = builder.isIterable;
+        isDate = builder.isDate;
     }
 
     public static Builder newBuilder() {
@@ -113,6 +115,15 @@ public class Property {
         return list.stream().map(s -> s + " != null").collect(Collectors.joining(" && "));
     }
 
+    public Boolean getDate() {
+        return isDate;
+    }
+
+    public Property setDate(Boolean date) {
+        isDate = date;
+        return this;
+    }
+
     public static final class Builder {
         private String name;
         private String parent;
@@ -121,6 +132,7 @@ public class Property {
         private Boolean isMap = Boolean.FALSE;
         private Boolean isCollection = Boolean.FALSE;
         private Boolean isIterable = Boolean.FALSE;
+        private Boolean isDate = Boolean.FALSE;
 
         private Builder() {
         }
@@ -157,6 +169,11 @@ public class Property {
 
         public Builder isIterable(Boolean val) {
             isIterable = val;
+            return this;
+        }
+
+        public Builder isDate(Boolean val) {
+            isDate = val;
             return this;
         }
 
