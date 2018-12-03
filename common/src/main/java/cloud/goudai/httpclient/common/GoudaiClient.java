@@ -15,4 +15,5 @@ public @interface GoudaiClient {
 
     String value();
 
+    String datePattern() default "";
 }
