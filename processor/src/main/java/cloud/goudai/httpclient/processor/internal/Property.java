@@ -110,7 +110,7 @@ public class Property {
         list.add(temp);
         while (temp.indexOf("().") > 0) {
             temp = org.apache.commons.lang3.StringUtils.substringBeforeLast(temp, ".");
-            list.addLast(temp);
+            list.addFirst(temp);
         }
         return list.stream().map(s -> s + " != null").collect(Collectors.joining(" && "));
     }
