@@ -267,7 +267,7 @@ public class SpringClientProcessor implements ClientProcessor {
         TypeName responseType = TypeName.get(method.getElement().getReturnType());
         ParameterizedTypeName parameterizedTypeName =
                 ParameterizedTypeName.get(ClassName.get(ParameterizedTypeReference.class),
-                        responseType);
+                        responseType.box());
         String simpleName = getSimpleName(responseType);
         FieldSpec fieldSpec = FieldSpec.builder(parameterizedTypeName, simpleName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
