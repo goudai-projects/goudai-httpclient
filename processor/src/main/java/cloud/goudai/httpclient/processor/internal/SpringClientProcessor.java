@@ -251,15 +251,16 @@ public class SpringClientProcessor implements ClientProcessor {
                     ParameterizedTypeName.get(body.getVariableElement().asType()),
                     HttpEntity.class, body.getName(), "headers");
         }
-        if (hasNamedUriVariables) {
-            builder.add("$T uri = builder.uriVariables($L)\n", URI.class, "uriVariables");
-        } else {
-            builder.add("$T uri = builder\n", URI.class);
-        }
+
+        builder.add("$T uri = builder\n", URI.class);
+
         if (hasIndexedUriVariables) {
             builder.add("\t\t.buildAndExpand($L.toArray())\n", "indexUriVariables");
         } else {
             builder.add("\t\t.buildAndExpand()\n");
+        }
+        if (hasNamedUriVariables) {
+            builder.add("\t\t.expand($L)\n", "uriVariables");
         }
         builder.addStatement("\t\t.toUri()");
 
