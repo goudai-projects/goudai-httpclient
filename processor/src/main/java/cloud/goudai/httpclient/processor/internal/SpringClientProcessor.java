@@ -41,6 +41,7 @@ public class SpringClientProcessor implements ClientProcessor {
 
     private String restTemplateName;
     private String baseUrl;
+    private String basePath;
     private String serviceName;
     private Types typeUtils;
     private Elements elementUtils;
@@ -63,16 +64,15 @@ public class SpringClientProcessor implements ClientProcessor {
 
     @Override
     public TypeSpec.Builder processType(TypeElement typeElement) {
-        String path;
         RequestMapping requestMapping = typeElement.getAnnotation(RequestMapping.class);
         if (requestMapping != null) {
-            path = getPath(this.serviceName + defaultIfBlank(requestMapping.value().length > 0
+            this.basePath = getPath(defaultIfBlank(requestMapping.value().length > 0
                             ? requestMapping.value()[0] : null,
                     requestMapping.name()));
         } else {
-            path = "";
+            this.basePath = "";
         }
-        this.baseUrl = "http://" + serviceName + path;
+        this.baseUrl = "http://" + serviceName;
 
         String name = typeElement.getAnnotation(GoudaiClient.class).value();
         String className = typeElement.getSimpleName().toString() + "Connector";
@@ -95,7 +95,7 @@ public class SpringClientProcessor implements ClientProcessor {
                 .addField(FieldSpec.builder(String.class, "baseUrl", Modifier.PRIVATE)
                         .addAnnotation(AnnotationSpec.builder(Value.class)
                                 .addMember("value", "$S",
-                                        "${" + name + ".baseUrl:" + this.baseUrl + "}")
+                                        "${" + name + ".baseUrl:" + this.baseUrl + "}" + this.basePath)
                                 .build())
                         .build())
                 .addMethod(MethodSpec.constructorBuilder()
