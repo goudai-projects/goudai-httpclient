@@ -257,7 +257,7 @@ public class SpringClientProcessor implements ClientProcessor {
         if (hasIndexedUriVariables) {
             builder.add("\t\t.buildAndExpand($L.toArray())\n", "indexUriVariables");
         } else {
-            builder.add("\t\t.buildAndExpand()\n");
+            builder.add("\t\t.build()\n");
         }
         if (hasNamedUriVariables) {
             builder.add("\t\t.expand($L)\n", "uriVariables");
