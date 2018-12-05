@@ -66,7 +66,7 @@ public class SpringClientProcessor implements ClientProcessor {
         String path;
         RequestMapping requestMapping = typeElement.getAnnotation(RequestMapping.class);
         if (requestMapping != null) {
-            path = getPath(this.serviceName + defaultIfBlank(requestMapping.value().length > 0
+            path = getPath(defaultIfBlank(requestMapping.value().length > 0
                             ? requestMapping.value()[0] : null,
                     requestMapping.name()));
         } else {
