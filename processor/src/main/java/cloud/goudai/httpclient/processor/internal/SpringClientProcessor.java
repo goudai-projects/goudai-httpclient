@@ -2,7 +2,6 @@ package cloud.goudai.httpclient.processor.internal;
 
 import cloud.goudai.httpclient.common.GoudaiClient;
 import com.squareup.javapoet.*;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -80,9 +79,9 @@ public class SpringClientProcessor implements ClientProcessor {
         TypeSpec.Builder builder = TypeSpec.classBuilder(className)
                 .addSuperinterface(TypeName.get(typeElement.asType()))
                 .addModifiers(new Modifier[]{Modifier.PUBLIC})
-                .addAnnotation(AnnotationSpec.builder(ClassName.get(CircuitBreaker.class))
-                        .addMember("name", "$S", name)
-                        .build())
+//                .addAnnotation(AnnotationSpec.builder(ClassName.get(CircuitBreaker.class))
+//                        .addMember("name", "$S", name)
+//                        .build())
 
                 .addAnnotation(AnnotationSpec.builder(ClassName.get(Service.class))
                         .addMember("value", "$S",
