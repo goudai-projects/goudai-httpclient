@@ -16,6 +16,7 @@ public class Property {
     private Boolean isCollection;
     private Boolean isIterable;
     private Boolean isDate;
+    private Boolean isEnum;
 
     private Property(Builder builder) {
         setName(builder.name);
@@ -26,6 +27,8 @@ public class Property {
         isCollection = builder.isCollection;
         isIterable = builder.isIterable;
         isDate = builder.isDate;
+        isEnum = builder.isEnum;
+
     }
 
     public static Builder newBuilder() {
@@ -119,6 +122,10 @@ public class Property {
         return isDate;
     }
 
+    public Boolean getEnum() {
+        return isEnum;
+    }
+
     public Property setDate(Boolean date) {
         isDate = date;
         return this;
@@ -133,6 +140,7 @@ public class Property {
         private Boolean isCollection = Boolean.FALSE;
         private Boolean isIterable = Boolean.FALSE;
         private Boolean isDate = Boolean.FALSE;
+        private Boolean isEnum = Boolean.FALSE;
 
         private Builder() {
         }
@@ -174,6 +182,11 @@ public class Property {
 
         public Builder isDate(Boolean val) {
             isDate = val;
+            return this;
+        }
+
+        public Builder isEnum(Boolean val) {
+            isEnum = val;
             return this;
         }
 

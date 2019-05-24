@@ -3,8 +3,10 @@ package cloud.goudai.httpclient.processor.internal;
 import com.squareup.javapoet.TypeName;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -57,6 +59,16 @@ public class TypeHelper {
         return TypeName.get(typeMirror).equals(TypeName.get(Date.class));
     }
 
+    public boolean isEnum(TypeMirror typeMirror) {
+        if (typeMirror.getKind() == TypeKind.DECLARED) {
+            DeclaredType declaredType = (DeclaredType) typeMirror;
+            if (declaredType.asElement().getKind() == ElementKind.ENUM) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public Set<Property> getProperties(String parent, String reader, String prefix, String paramName, TypeMirror typeMirror) {
         Set<Property> properties = new HashSet<>();
         TypeName typeName = TypeName.get(typeMirror);
@@ -94,6 +106,10 @@ public class TypeHelper {
             return properties;
         }
 
+        if (isEnum(typeMirror)) {
+            properties.add(Property.newBuilder().name(paramName).parent(parent).reader(reader).isEnum(true).build());
+            return properties;
+        }
 
         for (Element member : typeUtils.asElement(typeMirror)
                 .getEnclosedElements()) {
