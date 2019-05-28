@@ -184,9 +184,8 @@ public class SpringClientProcessor implements ClientProcessor {
                                         p.getReadAccessor()
                                 );
                             } else if (p.getEnum()) {
-                                builder1.addStatement("\t\tp.add($S, $T.valueOf($L.ordinal()))",
+                                builder1.addStatement("\t\tp.add($S, $L.name())",
                                         p.getName(),
-                                        TypeName.get(String.class),
                                         p.getReadAccessor()
                                 );
                             } else {
