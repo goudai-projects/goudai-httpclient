@@ -16,22 +16,6 @@ processor
         </dependency>
 ```
 
-circuitbreaker
-
-```xml
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>0.13.2</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot2</artifactId>
-            <version>0.13.2</version>
-        </dependency>
-```
-
-
 ## 使用
 
 定义接口
