@@ -1,24 +1,26 @@
 package cloud.goudai.httpclient.processor;
 
 import cloud.goudai.httpclient.common.GoudaiClient;
-import cloud.goudai.httpclient.processor.internal.ClientProcessor;
-import cloud.goudai.httpclient.processor.internal.Method;
-import cloud.goudai.httpclient.processor.internal.Parameter;
-import cloud.goudai.httpclient.processor.internal.SpringClientProcessor;
-import com.squareup.javapoet.*;
+import cloud.goudai.httpclient.processor.internal.conversion.ToStringProviderRegisterAdapter;
+import cloud.goudai.httpclient.processor.internal.processor.ClientProcessor;
+import cloud.goudai.httpclient.processor.internal.processor.ProcessorContext;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementKindVisitor8;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static javax.lang.model.element.ElementKind.CLASS;
 
 /**
  * @author jianglin
@@ -29,7 +31,7 @@ import java.util.stream.Collectors;
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class GoudaiClientProcessor extends AbstractProcessor {
-
+    private AnnotationProcessorContext annotationProcessorContext;
     private Types typeUtils;
     private Elements elementUtils;
     private Filer filer;
@@ -42,101 +44,95 @@ public class GoudaiClientProcessor extends AbstractProcessor {
         this.elementUtils = processingEnv.getElementUtils();
         this.filer = processingEnv.getFiler();
         this.messager = processingEnv.getMessager();
+        annotationProcessorContext = new AnnotationProcessorContext(elementUtils, typeUtils, messager, filer);
     }
 
     @Override
     public boolean process(final Set<? extends TypeElement> annotations,
                            final RoundEnvironment roundEnv) {
-        messager.printMessage(Diagnostic.Kind.NOTE, "GoudaiClientProcessor process");
-        Set<TypeElement> goudaiClients = getGoudaiClients(annotations, roundEnv);
-        processGoudaiClients(goudaiClients);
+        Set<TypeElement> clients = getClients(annotations, roundEnv);
+        processClients(clients);
         return false;
     }
 
-    private void processGoudaiClients(final Set<TypeElement> goudaiClients) {
-        String restTemplateName = "restTemplate";
+    private void processClients(final Set<TypeElement> clients) {
 
-        for (TypeElement typeElement : goudaiClients) {
-            String packageName = elementUtils.getPackageOf(typeElement).getQualifiedName().toString();
+        for (TypeElement typeElement : clients) {
             GoudaiClient goudaiClient = typeElement.getAnnotation(GoudaiClient.class);
-            String name = goudaiClient.value();
+            if (goudaiClient == null) {
+                continue;
+            }
             String datePattern = goudaiClient.datePattern();
-            SpringClientProcessor processor = new SpringClientProcessor(restTemplateName, name, typeUtils, elementUtils, messager, datePattern);
-            TypeSpec.Builder typeSpecBuilder = processor.processType(typeElement);
-
-            for (Element element : typeElement.getEnclosedElements()) {
-                if (element instanceof ExecutableElement) { // 方法
-                    ExecutableElement methodElement = (ExecutableElement) element;
-                    String methodName = methodElement.getSimpleName().toString();
-                    Set<Modifier> modifiers = methodElement.getModifiers()
-                            .stream()
-                            .filter(modifier -> !Modifier.ABSTRACT.equals(modifier))
-                            .collect(Collectors.toSet());
-
-                    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName)
-                            .addAnnotation(ClassName.get(Override.class))
-                            .addModifiers(modifiers)
-                            .returns(TypeName.get(methodElement.getReturnType()));
-
-                    List<Parameter> parameters = new LinkedList<>();
-                    int i = 0;
-                    for (VariableElement parameter : methodElement.getParameters()) { // 参数
-                        methodBuilder.addParameter(ParameterSpec.get(parameter));
-                        parameters.add(i, Parameter.newBuilder()
-                                .name(parameter.getSimpleName().toString())
-                                .index(i)
-                                .variableElement(parameter)
-                                .typeUtils(this.typeUtils)
-                                .elementUtils(this.elementUtils)
-                                .messager(this.messager)
-                                .build());
-                        i++;
-                    }
-                    CodeBlock codeBlock = processor.processMethod(Method.newBuilder()
-                            .typeUtils(this.typeUtils)
-                            .elementUtils(this.elementUtils)
-                            .messager(this.messager)
-                            .name(methodName)
-                            .element(methodElement)
-                            .parameters(parameters)
-                            .build());
-                    methodBuilder.addCode(codeBlock);
-                    typeSpecBuilder.addMethod(methodBuilder.build());
-                }
-            }
-            processor.afterProcess(typeSpecBuilder);
-            JavaFile javaFile = JavaFile.builder(packageName, typeSpecBuilder.build())
-                    .indent("\t")
-                    .build();
-            try {
-                javaFile.writeTo(filer);
-            } catch (IOException e) {
-                e.printStackTrace();
-                messager.printMessage(Diagnostic.Kind.ERROR, "生成javaFile失败");
-            }
+            String timePattern = goudaiClient.timePattern();
+            String decimalFormat = goudaiClient.decimalFormat();
+            ProcessorContext processorContext = new ProcessorContext(
+                    typeUtils,
+                    elementUtils,
+                    filer,
+                    messager,
+                    annotationProcessorContext,
+                    datePattern, timePattern, decimalFormat,
+                    getDeclaredTypesNotToBeImported(typeElement),
+                    getProviders());
+            process(typeElement, processorContext);
         }
-
     }
 
-    private Iterable<ClientProcessor> getProcessors() {
+    private void process(TypeElement typeElement, ProcessorContext processorContext) {
+        Object model = null;
+        for (ClientProcessor<?, ?> processor : getProcessors()) {
+            process(processorContext, processor, typeElement, model);
+        }
+    }
+
+    private <P, R> R process(ProcessorContext context, ClientProcessor<P, R> processor,
+                             TypeElement mapperTypeElement, Object modelElement) {
+        @SuppressWarnings("unchecked")
+        P sourceElement = (P) modelElement;
+        return processor.process(context, mapperTypeElement, sourceElement);
+    }
+
+    private Iterable<ClientProcessor<?, ?>> getProcessors() {
 
         Iterator<ClientProcessor> processorIterator = ServiceLoader.load(
                 ClientProcessor.class,
-                GoudaiClientProcessor.class.getClassLoader()
-        )
+                GoudaiClientProcessor.class.getClassLoader())
                 .iterator();
-        List<ClientProcessor> processors = new ArrayList<>();
+        List<ClientProcessor<?, ?>> processors = new ArrayList<>();
 
         while (processorIterator.hasNext()) {
             processors.add(processorIterator.next());
         }
-
+        Collections.sort(processors, new ProcessorComparator());
         return processors;
     }
 
-    private Set<TypeElement> getGoudaiClients(final Set<? extends TypeElement> annotations,
-                                              final RoundEnvironment roundEnv) {
-        Set<TypeElement> goudaiClients = new HashSet<>();
+    private List<ToStringProviderRegisterAdapter> getProviders() {
+
+        Iterator<ToStringProviderRegisterAdapter> providerIterator = ServiceLoader.load(
+                ToStringProviderRegisterAdapter.class,
+                GoudaiClientProcessor.class.getClassLoader())
+                .iterator();
+        List<ToStringProviderRegisterAdapter> providers = new ArrayList<>();
+
+        while (providerIterator.hasNext()) {
+            providers.add(providerIterator.next());
+        }
+        return providers;
+    }
+
+
+    private Map<String, String> getDeclaredTypesNotToBeImported(TypeElement element) {
+        return element.getEnclosedElements().stream()
+                .filter(e -> CLASS.equals(e.getKind()))
+                .map(Element::getSimpleName)
+                .map(Name::toString)
+                .collect(Collectors.toMap(k -> k, v -> element.getQualifiedName().toString() + "." + v));
+    }
+
+    private Set<TypeElement> getClients(final Set<? extends TypeElement> annotations,
+                                        final RoundEnvironment roundEnv) {
+        Set<TypeElement> clients = new HashSet<>();
 
         for (TypeElement annotation : annotations) {
             //Indicates that the annotation's type isn't on the class path of the compiled
@@ -156,7 +152,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                     // on some JDKs, RoundEnvironment.getElementsAnnotatedWith( ... ) returns types with
                     // annotations unknown to the compiler, even though they are not declared Mappers
                     if (mapperTypeElement != null) {
-                        goudaiClients.add(mapperTypeElement);
+                        clients.add(mapperTypeElement);
                     }
                 }
             } catch (Throwable t) { // whenever that may happen, but just to stay on the save side
@@ -164,7 +160,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                 continue;
             }
         }
-        return goudaiClients;
+        return clients;
     }
 
     private TypeElement asTypeElement(Element element) {
@@ -181,7 +177,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
                     }
 
                 }, null
-        );
+                             );
     }
 
     private void handleUncaughtError(Element element, Throwable thrown) {
@@ -192,5 +188,14 @@ public class GoudaiClientProcessor extends AbstractProcessor {
 
         processingEnv.getMessager().printMessage(
                 Diagnostic.Kind.ERROR, "Internal error in the mapping processor: " + reportableStacktrace, element);
+    }
+
+    private static class ProcessorComparator implements Comparator<ClientProcessor<?, ?>> {
+
+        @Override
+        public int compare(ClientProcessor<?, ?> o1,
+                           ClientProcessor<?, ?> o2) {
+            return Integer.compare(o1.getPriority(), o2.getPriority());
+        }
     }
 }

@@ -16,10 +16,10 @@ import java.util.List;
  * @author jianglin
  * @date 2018-11-30
  */
-final class Utils {
+public final class Utils {
 
     public static String getPath(String pathValue) {
-        if (pathValue == null) return "";
+        if (StringUtils.isBlank(pathValue)) return "";
         if (!pathValue.startsWith("/")) {
             pathValue = "/" + pathValue;
         }
@@ -48,7 +48,7 @@ final class Utils {
                     }
                 },
                 null
-        );
+                                               );
 
         if (declaredType == null) {
             return null;
@@ -62,7 +62,7 @@ final class Utils {
                     }
                 },
                 null
-        );
+                                                                 );
 
         return typeElement != null ? typeElement.getQualifiedName().toString() : null;
     }
