@@ -54,15 +54,4 @@
             </plugins>
         </pluginManagement>
     </build>
-
-    <distributionManagement>
-        <repository>
-            <id>releases</id>
-            <url>https://maven.mshoufu.com/repository/maven-releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>https://maven.mshoufu.com/repository/maven-snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
 </project>
