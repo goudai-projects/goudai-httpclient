@@ -16,4 +16,9 @@ public @interface GoudaiClient {
     String value();
 
     String datePattern() default "";
+
+    String timePattern() default "";
+
+    String decimalFormat() default "";
+
 }

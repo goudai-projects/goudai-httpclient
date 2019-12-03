@@ -1,29 +1,44 @@
-package cloud.goudai.httpclient.processor.internal;
+package cloud.goudai.httpclient.processor.internal.utils;
 
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.ClassUtils;
 
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleElementVisitor8;
 import javax.lang.model.util.SimpleTypeVisitor8;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * @author jianglin
  * @date 2018-11-30
  */
-final class Utils {
+public final class Utils {
 
     public static String getPath(String pathValue) {
-        if (pathValue == null) return "";
+        if (StringUtils.isBlank(pathValue)) return "";
         if (!pathValue.startsWith("/")) {
             pathValue = "/" + pathValue;
         }
         return pathValue;
+    }
+
+    public static boolean isSimpleValueType(Class<?> clazz) {
+        return (ClassUtils.isPrimitiveOrWrapper(clazz) ||
+                Enum.class.isAssignableFrom(clazz) ||
+                CharSequence.class.isAssignableFrom(clazz) ||
+                Number.class.isAssignableFrom(clazz) ||
+                Date.class.isAssignableFrom(clazz) ||
+                URI.class == clazz || URL.class == clazz ||
+                Locale.class == clazz || Class.class == clazz);
     }
 
     public static String decapitalize(String name) {
@@ -48,7 +63,7 @@ final class Utils {
                     }
                 },
                 null
-        );
+                                               );
 
         if (declaredType == null) {
             return null;
@@ -62,7 +77,7 @@ final class Utils {
                     }
                 },
                 null
-        );
+                                                                 );
 
         return typeElement != null ? typeElement.getQualifiedName().toString() : null;
     }
