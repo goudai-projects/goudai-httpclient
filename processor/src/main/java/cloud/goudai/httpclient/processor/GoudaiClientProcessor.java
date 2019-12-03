@@ -81,7 +81,7 @@ public class GoudaiClientProcessor extends AbstractProcessor {
     private void process(TypeElement typeElement, ProcessorContext processorContext) {
         Object model = null;
         for (ClientProcessor<?, ?> processor : getProcessors()) {
-            process(processorContext, processor, typeElement, model);
+            model = process(processorContext, processor, typeElement, model);
         }
     }
 

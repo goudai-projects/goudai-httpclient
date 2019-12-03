@@ -21,6 +21,6 @@ public class ClientRetrievalProcessor implements ClientProcessor<Object, Client>
 
     @Override
     public int getPriority() {
-        return 1000;
+        return 0;
     }
 }
