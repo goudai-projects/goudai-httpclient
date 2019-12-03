@@ -184,14 +184,30 @@ public class GenerateSourceProcessor implements ClientProcessor<Client, TypeSpec
             return;
         }
         for (Map.Entry<String, Param> stringParamEntry : request.getQueryParams().entrySet()) {
+            String paramName = stringParamEntry.getKey();
             Param param = stringParamEntry.getValue();
             Type type = param.getType();
-            ToStringProvider toStringProvider = context.getConversions().getToStringProvider(type);
-            ToStringConversion toStringConversion = toStringProvider.toString(context.getConversionContext());
-            importTypes.addAll(toStringConversion.getImportTypes());
             CodeBlock.Builder codeBuilder = CodeBlock.builder();
-            codeBuilder.beginControlFlow("if($T.nonNull(" + param.getReader() + "))", Objects.class);
-            codeBuilder.addStatement("uriBuilder.queryParam($S, " + toStringConversion.getOpenExpression() + param.getReader() + toStringConversion.getCloseExpression() + ")", stringParamEntry.getKey());
+            if (StringUtils.equalsIgnoreCase(param.getName(), param.getReader())) {
+                codeBuilder.beginControlFlow("if($T.nonNull(" + param.getReader() + "))", Objects.class);
+            } else {
+                codeBuilder.beginControlFlow("if($T.nonNull(" + param.getName() + ") && $T.nonNull(" + param.getReader() + "))", Objects.class, Objects.class);
+            }
+            if (type.isMapType()) {
+                codeBuilder.addStatement(param.getReader() + ".forEach((k, v) -> uriBuilder.queryParam(k, v)))",
+                        String.class);
+            } else if (type.isArrayType()) {
+                codeBuilder.addStatement("$T.stream(" + param.getReader() + ").forEach(next -> uriBuilder.queryParam" +
+                                "($S, next))",
+                        Arrays.class, paramName);
+            } else if (type.isIterableType() || type.isCollectionType()) {
+                codeBuilder.addStatement(param.getReader() + ".forEach(next -> p.add($S, next))", paramName);
+            } else {
+                ToStringProvider toStringProvider = context.getConversions().getToStringProvider(type);
+                ToStringConversion toStringConversion = toStringProvider.toString(context.getConversionContext());
+                importTypes.addAll(toStringConversion.getImportTypes());
+                codeBuilder.addStatement("uriBuilder.queryParam($S, " + toStringConversion.getOpenExpression() + param.getReader() + toStringConversion.getCloseExpression() + ")", paramName);
+            }
             codeBuilder.endControlFlow();
             builder.add(codeBuilder.build());
         }

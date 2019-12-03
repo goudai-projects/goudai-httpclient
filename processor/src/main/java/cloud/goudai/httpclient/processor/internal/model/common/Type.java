@@ -11,9 +11,9 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.net.URI;
+import java.net.URL;
+import java.util.*;
 
 /**
  * @author jianglin
@@ -171,7 +171,8 @@ public class Type implements ModelElement {
 
     public List<ExecutableElement> getAllMethods() {
         if (allMethods == null) {
-            allMethods = MoreElements.getLocalAndInheritedMethods(typeElement, typeUtils, elementUtils).asList();
+            allMethods = MoreElements.getLocalAndInheritedMethods(typeElement, typeUtils, elementUtils)
+                    .asList();
         }
         return allMethods;
     }
@@ -199,6 +200,36 @@ public class Type implements ModelElement {
             result = wildcardType.getExtendsBound() != null;
         }
         return result;
+    }
+
+    public boolean isSimpleValueType() {
+        return isPrimitive()
+                || isBoxedPrimitive()
+                || isEnumType()
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(CharSequence.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(Number.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(Date.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(URI.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(URL.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(Locale.class.getCanonicalName()).asType())
+                || typeUtils.isAssignable(typeMirror,
+                elementUtils.getTypeElement(Locale.class.getCanonicalName()).asType())
+                ;
+    }
+
+    public boolean isBoxedPrimitive() {
+        try {
+            typeUtils.unboxedType(typeMirror);
+            return true;
+        } catch (Exception ex) {
+        }
+        return false;
     }
 
     @Override

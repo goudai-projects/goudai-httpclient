@@ -2,6 +2,7 @@ package cloud.goudai.httpclient.processor.internal.model.common;
 
 import cloud.goudai.httpclient.processor.internal.utils.Collections;
 
+import javax.lang.model.element.ExecutableElement;
 import java.util.Set;
 
 /**
@@ -12,10 +13,12 @@ public class Field implements ModelElement {
 
     private final String name;
     private final Type type;
+    private final ExecutableElement executableElement;
 
-    public Field(String name, Type type) {
+    public Field(String name, Type type, ExecutableElement executableElement) {
         this.name = name;
         this.type = type;
+        this.executableElement = executableElement;
     }
 
     public String getName() {
@@ -31,5 +34,7 @@ public class Field implements ModelElement {
         return Collections.asSet(type);
     }
 
-
+    public ExecutableElement getExecutableElement() {
+        return executableElement;
+    }
 }

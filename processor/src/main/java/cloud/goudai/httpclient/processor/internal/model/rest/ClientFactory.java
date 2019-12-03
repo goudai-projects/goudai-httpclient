@@ -18,7 +18,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.*;
 
-import static cloud.goudai.httpclient.processor.internal.Utils.getPath;
+import static cloud.goudai.httpclient.processor.internal.utils.Utils.getPath;
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 
 /**
@@ -183,11 +183,15 @@ public class ClientFactory {
                 flag = false;
             }
             if (flag) {
-                List<Field> fields = typeFactory.getFields(parameterType);
-                for (Field field : fields) {
-                    queryParams.put(field.getName(), new Param(parameterName, field.getType(),
-                            AccessorUtils.getAccessor(field).replaceAll("<SOURCE>", parameterName)));
-                    log(field.getName() + " " + AccessorUtils.getAccessor(field));
+                if (parameterType.isSimpleValueType()) {
+                    queryParams.put(parameterName, new Param(parameterName, parameterType, parameterName));
+                } else {
+                    List<Field> fields = typeFactory.getFields(parameterType);
+                    for (Field field : fields) {
+                        queryParams.put(field.getName(), new Param(parameterName, field.getType(),
+                                AccessorUtils.getAccessor(field).replaceAll("<SOURCE>", parameterName)));
+                        log(field.getName() + " " + AccessorUtils.getAccessor(field));
+                    }
                 }
             }
         }

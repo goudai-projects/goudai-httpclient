@@ -8,10 +8,9 @@ import javax.lang.model.element.*;
 import javax.lang.model.type.*;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
 import java.util.*;
 
-import static cloud.goudai.httpclient.processor.internal.Utils.getQualifiedName;
+import static cloud.goudai.httpclient.processor.internal.utils.Utils.getQualifiedName;
 
 
 /**
@@ -347,33 +346,37 @@ public class TypeFactory {
     public List<Field> getFields(Type type) {
         List<Field> fields = new ArrayList<>();
         for (VariableElement element : type.getAllFields()) {
-            fields.add(getField(element));
+            Type varType = getType(element.asType());
+            String fieldName = element.getSimpleName().toString();
+            ExecutableElement readerMethod = getReader(type.getAllMethods(), fieldName, varType);
+            if (readerMethod == null) {
+                continue;
+            }
+            Field field = new Field(fieldName, varType, readerMethod);
+            fields.add(field);
         }
         return fields;
     }
 
-    public Field getField(VariableElement element) {
-        Type type = getType(element.asType());
-        String fieldName = element.getSimpleName().toString();
-//        ExecutableElement readerMethod = null;
-//        for (ExecutableElement method : type.getAllMethods()) {
-//            if (!method.getParameters().isEmpty()) {
-//                continue;
-//            }
-//            boolean sameType = MoreTypes.equivalence().equivalent(method.getReturnType(), type.getTypeMirror());
-//            String methodName = method.getSimpleName().toString();
-//            boolean isGetter = methodName.equalsIgnoreCase("get" + fieldName);
-//
-//            boolean isBooleanGetterName = methodName.equalsIgnoreCase("is" + fieldName);
-//            boolean returnTypeIsBoolean = method.getReturnType().getKind() == TypeKind.BOOLEAN ||
-//                    "java.lang.Boolean".equals(getQualifiedName(method.getReturnType()));
-//            messager.printMessage(Diagnostic.Kind.NOTE,
-//                    fieldName + " " + methodName + " " + sameType + " " + isGetter + " " + isBooleanGetterName + " " + returnTypeIsBoolean);
-//            if (sameType && (isGetter || (isBooleanGetterName && returnTypeIsBoolean))) {
-//                readerMethod = method;
-//            }
-//        }
-        return new Field(fieldName, type);
+    private ExecutableElement getReader(List<ExecutableElement> methods, String fieldName, Type fieldType) {
+        ExecutableElement readerMethod = null;
+        for (ExecutableElement method : methods) {
+            if (!method.getParameters().isEmpty()) {
+                continue;
+            }
+            boolean sameType = MoreTypes.equivalence().equivalent(method.getReturnType(), fieldType
+                    .getTypeMirror());
+            String methodName = method.getSimpleName().toString();
+            boolean isGetter = methodName.equalsIgnoreCase("get" + fieldName);
+
+            boolean isBooleanGetterName = methodName.equalsIgnoreCase("is" + fieldName);
+            boolean returnTypeIsBoolean = method.getReturnType().getKind() == TypeKind.BOOLEAN ||
+                    "java.lang.Boolean".equals(getQualifiedName(method.getReturnType()));
+            if (sameType && (isGetter || (isBooleanGetterName && returnTypeIsBoolean))) {
+                readerMethod = method;
+            }
+        }
+        return readerMethod;
     }
 
     private TypeMirror getPrimitiveType(Class<?> primitiveType) {
