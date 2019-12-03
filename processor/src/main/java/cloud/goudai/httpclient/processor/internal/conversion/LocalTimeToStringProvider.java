@@ -7,7 +7,7 @@ package cloud.goudai.httpclient.processor.internal.conversion;
 public class LocalTimeToStringProvider extends AbstractJavaTimeToStringProvider {
     @Override
     protected String defaultPattern() {
-        return "HH:mm:ss:SSS";
+        return "HH:mm:ss";
     }
 
     @Override

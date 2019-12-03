@@ -7,7 +7,7 @@ package cloud.goudai.httpclient.processor.internal.conversion;
 public class LocalDateTimeToStringProvider extends AbstractJavaTimeToStringProvider {
     @Override
     protected String defaultPattern() {
-        return "yyyy-MM-dd HH:mm:ss:SSS";
+        return "yyyy-MM-dd HH:mm:ss";
     }
 
     @Override

@@ -31,7 +31,7 @@ public class DateToStringProvider extends SimpleToStringProvider implements ToSt
 
         if (conversionContext.getDatePattern() != null) {
             conversionString.append(" \"");
-            conversionString.append(defaultIfBlank(conversionContext.getDatePattern(), "yyyy-MM-dd HH:mm:ss:SSS"));
+            conversionString.append(defaultIfBlank(conversionContext.getDatePattern(), "yyyy-MM-dd HH:mm:ss"));
             conversionString.append("\" ");
         }
 
